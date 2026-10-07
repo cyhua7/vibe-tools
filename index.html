@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💣 數字踩地雷</title>
+<style>
+    :root {
+        --bg: #080808;
+        --bg-panel: #121212;
+        --pink: #FF2D95;
+        --pink-dark: #C2185B;
+        --white: #ffffff;
+        --gray: #b3b3b3;
+        --gray-dim: #6e6e6e;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    html, body {
+        background: var(--bg);
+        color: var(--white);
+        font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+        overflow-x: hidden;
+    }
+
+    body {
+        min-height: 100vh;
+        padding: 24px 16px 48px;
+        background-image:
+            radial-gradient(circle at 15% 10%, rgba(255, 45, 149, 0.08), transparent 40%),
+            radial-gradient(circle at 85% 90%, rgba(194, 24, 91, 0.08), transparent 40%);
+    }
+
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    /* ===== 標題 ===== */
+    header {
+        text-align: center;
+        margin-bottom: 22px;
+    }
+
+    h1 {
+        font-size: clamp(1.8rem, 5vw, 2.8rem);
+        letter-spacing: 4px;
+        color: var(--white);
+        text-shadow: 0 0 12px var(--pink), 0 0 30px rgba(255, 45, 149, 0.6);
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        color: var(--gray);
+        font-size: 0.95rem;
+        line-height: 1.7;
+    }
+
+    /* ===== 狀態列 ===== */
+    .status-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        align-items: stretch;
+        margin-bottom: 16px;
+    }
+
+    .status-card {
+        background: var(--bg-panel);
+        border: 1px solid rgba(255, 45, 149, 0.35);
+        border-radius: 10px;
+        padding: 12px 20px;
+        text-align: center;
+        min-width: 150px;
+        box-shadow: 0 0 14px rgba(255, 45, 149, 0.12) inset;
+        flex: 1 1 150px;
+    }
+
+    .status-card .label {
+        display: block;
+        font-size: 0.78rem;
+        letter-spacing: 2px;
+        color: var(--gray-dim);
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+
+    .status-card .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--pink);
+        text-shadow: 0 0 8px rgba(255, 45, 149, 0.7);
+    }
+
+    .status-card .value.range {
+        letter-spacing: 2px;
+    }
+
+    /* ===== 提示區 ===== */
+    .message-box {
+        min-height: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background: rgba(255, 45, 149, 0.07);
+        border: 1px dashed rgba(255, 45, 149, 0.45);
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin-bottom: 20px;
+        font-size: 1.02rem;
+        color: var(--gray);
+        transition: all 0.25s ease;
+    }
+
+    .message-box.hint {
+        color: var(--white);
+        border-color: var(--pink);
+        box-shadow: 0 0 16px rgba(255, 45, 149, 0.25);
+    }
+
+    .message-box.danger {
+        color: #fff;
+        background: rgba(255, 45, 149, 0.2);
+        border: 1px solid var(--pink);
+        animation: pulseDanger 0.6s ease infinite alternate;
+    }
+
+    @keyframes pulseDanger {
+        from { box-shadow: 0 0 8px rgba(255, 45, 149, 0.4); }
+        to   { box-shadow: 0 0 26px rgba(255, 45, 149, 0.9); }
+    }
+
+    /* ===== 數字網格 ===== */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 8px;
+        margin-bottom: 24px;
+    }
+
+    .num {
+        aspect-ratio: 1 / 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: clamp(0.75rem, 2.2vw, 1rem);
+        font-weight: 600;
+        color: var(--white);
+        background: #161616;
+        border: 2px solid var(--pink-dark);
+        border-radius: 8px;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.12s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    /* 可選擇 */
+    .num.selectable:hover {
+        background: #1f1f1f;
+        border-color: var(--pink);
+        box-shadow: 0 0 14px rgba(255, 45, 149, 0.75);
+        transform: translateY(-2px);
+    }
+
+    .num.selectable:active {
+        transform: scale(0.92);
+        background: var(--pink-dark);
+    }
+
+    /* 已猜過（安全） */
+    .num.guessed {
+        background: rgba(194, 24, 91, 0.18);
+        border-color: rgba(255, 45, 149, 0.35);
+        color: rgba(255, 45, 149, 0.65);
+        cursor: not-allowed;
+        opacity: 0.75;
+        box-shadow: none;
+        transform: none;
+    }
+
+    /* 範圍外 */
+    .num.out {
+        background: #101010;
+        border-color: #2a2a2a;
+        color: var(--gray-dim);
+        opacity: 0.35;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+    }
+
+    .num.out:hover {
+        box-shadow: none;
+        transform: none;
+        background: #101010;
+        border-color: #2a2a2a;
+    }
+
+    /* 踩雷 */
+    .num.mine {
+        background: var(--pink);
+        border-color: #fff;
+        color: #fff;
+        opacity: 1;
+        cursor: not-allowed;
+        box-shadow: 0 0 26px var(--pink), 0 0 50px rgba(255, 45, 149, 0.8);
+        animation: mineShake 0.4s ease infinite alternate;
+        font-size: clamp(1rem, 3vw, 1.4rem);
+    }
+
+    @keyframes mineShake {
+        from { transform: translate(-1px, -1px) rotate(-2deg); }
+        to   { transform: translate(1px, 1px) rotate(2deg); }
+    }
+
+    /* ===== BOOM 面板 ===== */
+    .boom-panel {
+        display: none;
+        text-align: center;
+        background: linear-gradient(160deg, rgba(255, 45, 149, 0.22), rgba(194, 24, 91, 0.12));
+        border: 2px solid var(--pink);
+        border-radius: 14px;
+        padding: 28px 20px;
+        margin-bottom: 22px;
+        box-shadow: 0 0 30px rgba(255, 45, 149, 0.45);
+    }
+
+    .boom-panel.show {
+        display: block;
+        animation: boomIn 0.4s ease;
+    }
+
+    @keyframes boomIn {
+        0%   { transform: scale(0.6); opacity: 0; }
+        60%  { transform: scale(1.06); opacity: 1; }
+        100% { transform: scale(1); }
+    }
+
+    .boom-title {
+        font-size: clamp(2rem, 7vw, 3.4rem);
+        font-weight: 900;
+        letter-spacing: 6px;
+        color: var(--pink);
+        text-shadow: 0 0 18px var(--pink), 0 0 44px rgba(255, 45, 149, 0.9);
+        margin-bottom: 14px;
+    }
+
+    .boom-info {
+        color: var(--white);
+        font-size: 1.05rem;
+        line-height: 2;
+    }
+
+    .boom-info strong {
+        color: var(--pink);
+        font-size: 1.3rem;
+    }
+
+    /* ===== 按鈕 ===== */
+    .btn {
+        display: inline-block;
+        margin-top: 18px;
+        padding: 14px 44px;
+        font-size: 1.05rem;
+        font-weight: 700;
+        letter-spacing: 3px;
+        color: var(--white);
+        background: transparent;
+        border: 2px solid var(--pink);
+        border-radius: 999px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+        background: var(--pink);
+        box-shadow: 0 0 22px rgba(255, 45, 149, 0.8);
+        transform: translateY(-2px);
+    }
+
+    .btn:active {
+        transform: scale(0.95);
+    }
+
+    .restart-bar {
+        text-align: center;
+    }
+
+    .restart-bar .btn.mini {
+        padding: 10px 28px;
+        font-size: 0.9rem;
+        border-width: 1px;
+        border-color: rgba(255, 45, 149, 0.5);
+        color: var(--gray);
+    }
+
+    .restart-bar .btn.mini:hover {
+        color: var(--white);
+        border-color: var(--pink);
+    }
+
+    /* ===== 閃爍效果 ===== */
+    .flash {
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 45, 149, 0.55);
+        pointer-events: none;
+        z-index: 999;
+        animation: flashAnim 0.5s ease-out forwards;
+    }
+
+    @keyframes flashAnim {
+        0%   { opacity: 1; }
+        100% { opacity: 0; }
+    }
+
+    /* ===== 響應式 ===== */
+    @media (max-width: 600px) {
+        body { padding: 16px 10px 36px; }
+        .grid { gap: 5px; }
+        .num { border-radius: 6px; border-width: 1.5px; }
+        .status-card { min-width: 120px; padding: 10px 12px; }
+        .status-card .value { font-size: 1.25rem; }
+    }
+
+    @media (max-width: 420px) {
+        .grid { grid-template-columns: repeat(10, 1fr); gap: 4px; }
+        .num { font-size: 0.68rem; }
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>💣 數字踩地雷</h1>
+        <p class="subtitle">
+            從 1～100 中找出隱藏的地雷。<br>
+            每次猜測都會縮小地雷的可能範圍。
+        </p>
+    </header>
+
+    <div class="status-bar">
+        <div class="status-card">
+            <span class="label">目前範圍</span>
+            <span class="value range" id="rangeDisplay">1 ～ 100</span>
+        </div>
+        <div class="status-card">
+            <span class="label">猜測次數</span>
+            <span class="value" id="guessDisplay">0</span>
+        </div>
+    </div>
+
+    <div class="message-box" id="messageBox">點擊數字開始猜測，小心地雷！</div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="boom-panel" id="boomPanel">
+        <div class="boom-title">💣 BOOM！</div>
+        <div class="boom-info">
+            你踩到地雷了！<br>
+            地雷是 <strong id="boomMine">-</strong><br>
+            猜測次數：<strong id="boomCount">-</strong>
+        </div>
+        <button class="btn" id="restartBtn">重新開始</button>
+    </div>
+
+    <div class="restart-bar" id="restartBar">
+        <button class="btn mini" id="resetBtn">重新開始</button>
+    </div>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    // ===== 遊戲狀態 =====
+    var mineNumber  = 0;   // 地雷
+    var minNumber   = 1;   // 目前範圍下限
+    var maxNumber   = 100; // 目前範圍上限
+    var guessCount  = 0;   // 猜測次數
+    var guessedNumbers = []; // 已經猜過的數字
+    var gameOver   = false; // 遊戲是否結束
+
+    // ===== DOM =====
+    var gridEl       = document.getElementById("grid");
+    var rangeEl      = document.getElementById("rangeDisplay");
+    var guessEl      = document.getElementById("guessDisplay");
+    var messageBox   = document.getElementById("messageBox");
+    var boomPanel    = document.getElementById("boomPanel");
+    var boomMineEl   = document.getElementById("boomMine");
+    var boomCountEl  = document.getElementById("boomCount");
+    var restartBtn   = document.getElementById("restartBtn");
+    var resetBtn     = document.getElementById("resetBtn");
+
+    var buttons = {}; // 數字 -> 按鈕元素
+
+    // ===== 建立 1～100 按鈕 =====
+    function buildGrid() {
+        gridEl.innerHTML = "";
+        buttons = {};
+        for (var n = 1; n <= 100; n++) {
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "num";
+            btn.textContent = n;
+            btn.setAttribute("data-num", n);
+            btn.addEventListener("click", onNumberClick);
+            gridEl.appendChild(btn);
+            buttons[n] = btn;
+        }
+    }
+
+    // ===== 點擊數字 =====
+    function onNumberClick(e) {
+        if (gameOver) return;
+
+        var guess = parseInt(e.currentTarget.getAttribute("data-num"), 10);
+
+        // 已猜過或範圍外 → 不允許
+        if (guessedNumbers.indexOf(guess) !== -1) return;
+        if (guess < minNumber || guess > maxNumber) return;
+
+        guessCount++;
+        guessedNumbers.push(guess);
+        guessEl.textContent = guessCount;
+
+        if (guess === mineNumber) {
+            // 踩雷
+            handleBoom(guess);
+        } else if (guess > mineNumber) {
+            // 猜太大：上限改成玩家選擇的數字（包含本身）
+            maxNumber = guess;
+            setMessage("數字太大！地雷在更小的範圍。", "hint");
+            updateUI();
+        } else {
+            // 猜太小：下限改成玩家選擇的數字（包含本身）
+            minNumber = guess;
+            setMessage("數字太小！地雷在更大的範圍。", "hint");
+            updateUI();
+        }
+    }
+
+    // ===== 踩雷 =====
+    function handleBoom(guess) {
+        gameOver = true;
+
+        // 畫面閃爍
+        var flash = document.createElement("div");
+        flash.className = "flash";
+        document.body.appendChild(flash);
+        setTimeout(function () {
+            if (flash.parentNode) flash.parentNode.removeChild(flash);
+        }, 550);
+
+        boomMineEl.textContent = mineNumber;
+        boomCountEl.textContent = guessCount;
+        boomPanel.classList.add("show");
+        document.getElementById("restartBar").style.display = "none";
+
+        setMessage("💣 BOOM！你踩到地雷了！", "danger");
+
+        updateUI(guess);
+    }
+
+    // ===== 更新畫面 =====
+    function updateUI(mineGuess) {
+        rangeEl.textContent = minNumber + " ～ " + maxNumber;
+        guessEl.textContent = guessCount;
+
+        for (var n = 1; n <= 100; n++) {
+            var btn = buttons[n];
+            btn.className = "num";
+            btn.disabled = false;
+
+            if (n === mineGuess && gameOver) {
+                // 踩雷的按鈕
+                btn.classList.add("mine");
+                btn.textContent = "💣";
+                btn.disabled = true;
+            } else if (guessedNumbers.indexOf(n) !== -1) {
+                // 已猜過（安全）
+                btn.classList.add("guessed");
+                btn.textContent = n;
+                btn.disabled = true;
+            } else if (n < minNumber || n > maxNumber) {
+                // 範圍外
+                btn.classList.add("out");
+                btn.textContent = n;
+                btn.disabled = true;
+            } else {
+                // 可選擇
+                btn.classList.add("selectable");
+                btn.textContent = n;
+            }
+        }
+    }
+
+    // ===== 提示訊息 =====
+    function setMessage(text, type) {
+        messageBox.textContent = text;
+        messageBox.className = "message-box";
+        if (type) messageBox.classList.add(type);
+    }
+
+    // ===== 重新開始 =====
+    function restart() {
+        mineNumber = Math.floor(Math.random() * 100) + 1; // 1～100
+        minNumber = 1;
+        maxNumber = 100;
+        guessCount = 0;
+        guessedNumbers = [];
+        gameOver = false;
+
+        boomPanel.classList.remove("show");
+        document.getElementById("restartBar").style.display = "";
+        setMessage("點擊數字開始猜測，小心地雷！", "");
+
+        updateUI();
+    }
+
+    restartBtn.addEventListener("click", restart);
+    resetBtn.addEventListener("click", restart);
+
+    // ===== 啟動 =====
+    buildGrid();
+    restart();
+})();
+</script>
+
+</body>
+</html>
